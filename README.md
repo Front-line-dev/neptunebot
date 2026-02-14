@@ -1,5 +1,7 @@
 # neptunebot (Discord YouTube Music Bot)
 
+> Codex, Antigravity를 사용하여 자동 제작된 디스코드 봇입니다.
+
 **Node.js 24**와 **TypeScript**로 작성된 디스코드 유튜브 음악 봇입니다. 
 최신 디스코드 음성 보안 표준인 **DAVE (E2EE)**를 지원하며, 여러 서버에서 동시에 끊김 없이 음악을 재생할 수 있도록 설계되었습니다.
 
@@ -96,32 +98,66 @@ npm run typecheck
 npm run start
 ```
 
-### 서버 데몬으로 실행 (Linux Systemd)
-서버 재부팅 시에도 자동으로 실행되도록 설정하는 방법입니다.
+### Crontab으로 자동 실행 및 유지 (Auto-restart)
+서버가 재부팅되거나 봇이 예기치 않게 종료되었을 때, 자동으로 봇을 다시 실행하기 위해 `crontab`과 쉘 스크립트를 사용합니다.
 
-1. 서비스 파일 생성: `/etc/systemd/system/neptunebot.service`
-```ini
-[Unit]
-Description=neptunebot (Discord music bot)
-After=network-online.target
+#### 1. 실행 스크립트 작성 (`keep_alive.sh`)
+프로젝트 루트 디렉토리에 `keep_alive.sh` 파일을 생성합니다.
 
-[Service]
-Type=simple
-WorkingDirectory=/opt/neptunebot
-EnvironmentFile=/opt/neptunebot/.env
-ExecStart=/usr/bin/node /opt/neptunebot/src/index.ts
-Restart=always
-RestartSec=3
-User=ubuntu
+```bash
+# 봇이 위치한 디렉토리로 이동 (예: /home/ubuntu/neptunebot)
+# 자신의 환경에 맞게 경로를 수정하세요.
+APP_DIR="/home/ubuntu/neptunebot"
 
-[Install]
-WantedBy=multi-user.target
+cd "$APP_DIR" || exit
+
+# 프로세스가 실행 중인지 확인 ("node src/index.ts" 프로세스 감지)
+if ! pgrep -f "node src/index.ts" > /dev/null; then
+    echo "[$(date)] Bot is dead. Restarting..." >> bot_monitor.log
+    
+    # 로그를 남기며 백그라운드 실행
+    # (주의: npm run start 명령은 내부적으로 node src/index.ts를 실행합니다)
+    nohup npm run start > bot_output.log 2>&1 &
+fi
 ```
 
-2. 서비스 활성화 및 시작
+#### 2. 실행 권한 부여
+스크립트 파일에 실행 권한을 부여합니다.
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now neptunebot
+chmod +x keep_alive.sh
+```
+
+#### 3. Crontab 등록
+1분마다 위 스크립트를 실행하도록 설정하여, 봇이 죽으면 1분 내에 되살아나도록 합니다.
+
+**Crontab 편집 모드 진입:**
+```bash
+crontab -e
+```
+
+**파일 맨 아래에 다음 줄을 추가합니다:**
+(반드시 `keep_alive.sh` 파일의 절대 경로를 적어야 합니다.)
+
+```cron
+# 1분마다 봇 상태 체크 및 재시작
+* * * * * /home/ubuntu/neptunebot/keep_alive.sh
+```
+
+저장하고 나옵니다.
+- `nano` 에디터인 경우: `Ctrl+O` -> `Enter` -> `Ctrl+X`
+- `vim` 에디터인 경우: `:wq` -> `Enter`
+
+#### 4. 로그 확인
+봇의 실행 로그나 에러를 확인하려면 다음 명령어를 사용합니다.
+
+**봇 출력 로그 (실시간 확인):**
+```bash
+tail -f bot_output.log
+```
+
+**재시작 기록 확인:**
+```bash
+cat bot_monitor.log
 ```
 
 ## 🎵 사용 방법 (Usage)
@@ -147,6 +183,3 @@ sudo systemctl enable --now neptunebot
   - 실행 환경의 Node.js 암호화 백엔드가 AES-256-GCM을 지원하지 않는 경우입니다.
 - **음악이 재생되지 않고 바로 끊기는 경우:**
   - `yt-dlp` 버전이 최신인지 확인하세요. 유튜브의 다운로드 방식 변경으로 인해 구버전에서는 작동하지 않을 수 있습니다. (`sudo yt-dlp -U`)
-
----
-**주의:** 본 봇을 사용하여 유튜브 음원을 재생/다운로드하는 행위에 대한 책임은 사용자 본인에게 있습니다. 유튜브 이용 약관 및 저작권법을 준수하여 사용하시기 바랍니다.

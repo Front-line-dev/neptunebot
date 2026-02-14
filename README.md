@@ -101,8 +101,8 @@ npm run start
 ### Crontab으로 자동 실행 및 유지 (Auto-restart)
 서버가 재부팅되거나 봇이 예기치 않게 종료되었을 때, 자동으로 봇을 다시 실행하기 위해 `crontab`과 쉘 스크립트를 사용합니다.
 
-#### 1. 실행 스크립트 작성 (`keep_alive.sh`)
-프로젝트 루트 디렉토리에 `keep_alive.sh` 파일을 생성합니다.
+#### 1. 실행 스크립트 작성 (`neptunebot.sh`)
+프로젝트 루트 디렉토리에 `neptunebot.sh` 파일을 생성합니다.
 
 ```bash
 # 봇이 위치한 디렉토리로 이동 (예: /home/ubuntu/neptunebot)
@@ -124,7 +124,7 @@ fi
 #### 2. 실행 권한 부여
 스크립트 파일에 실행 권한을 부여합니다.
 ```bash
-chmod +x keep_alive.sh
+chmod +x neptunebot.sh
 ```
 
 #### 3. Crontab 등록
@@ -136,19 +136,18 @@ crontab -e
 ```
 
 **파일 맨 아래에 다음 줄을 추가합니다:**
-(반드시 `keep_alive.sh` 파일의 절대 경로를 적어야 합니다.)
+(반드시 `neptunebot.sh` 파일의 절대 경로를 적어야 합니다.)
 
 ```cron
 # 1분마다 봇 상태 체크 및 재시작
-* * * * * /home/ubuntu/neptunebot/keep_alive.sh
+* * * * * /home/ubuntu/neptunebot/neptunebot.sh
 ```
 
 저장하고 나옵니다.
 - `nano` 에디터인 경우: `Ctrl+O` -> `Enter` -> `Ctrl+X`
 - `vim` 에디터인 경우: `:wq` -> `Enter`
 
-#### 4. 로그 확인
-봇의 실행 로그나 에러를 확인하려면 다음 명령어를 사용합니다.
+#### 4. 로그 확인 및 봇 종료 방법
 
 **봇 출력 로그 (실시간 확인):**
 ```bash
@@ -159,6 +158,21 @@ tail -f bot_output.log
 ```bash
 cat bot_monitor.log
 ```
+
+**봇 완전히 종료하기 (Stop):**
+단순히 프로세스만 죽이면 crontab이 1분 뒤에 다시 살려내므로, crontab을 비활성화한 후 종료해야 합니다.
+
+1.  **Crontab 주석 처리**:
+    ```bash
+    crontab -e
+    # 해당 라인 앞에 #을 붙여 주석 처리 후 저장
+    # * * * * * /home/ubuntu/neptunebot/neptunebot.sh
+    ```
+
+2.  **프로세스 종료**:
+    ```bash
+    pkill -f "node src/index.ts"
+    ```
 
 ## 🎵 사용 방법 (Usage)
 

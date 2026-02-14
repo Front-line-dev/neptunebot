@@ -22,14 +22,30 @@
 
 ### Ubuntu 설치 예시
 ```bash
-# 시스템 업데이트
+# 시스템 업데이트 및 ffmpeg 설치
 sudo apt update
+sudo apt install -y ffmpeg
 
-# ffmpeg 및 yt-dlp 설치
-sudo apt install -y ffmpeg yt-dlp
+# yt-dlp 최신 버전 설치
+sudo wget -O /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
+sudo chmod a+rx /usr/local/bin/yt-dlp
+```
 
-# Node.js 버전 확인 (24 이상이어야 함)
-node -v
+### Node.js (nvm 등) 설치
+이 봇은 **Node.js 24** 버전 이상을 권장합니다. `nvm`(Node Version Manager)을 사용하면 간편하게 설치하고 관리할 수 있습니다.
+
+1. **nvm 설치**:
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+# 설치 후 터미널을 껐다 켜거나 아래 명령어를 입력하세요.
+source ~/.bashrc
+```
+
+2. **Node.js 24 설치**:
+```bash
+nvm install 24
+nvm use 24
+node -v # v24.x.x 확인
 ```
 
 ## 🚀 설치 및 설정 (Setup)
@@ -105,18 +121,23 @@ npm run start
 프로젝트 루트 디렉토리에 `neptunebot.sh` 파일을 생성합니다.
 
 ```bash
-# 봇이 위치한 디렉토리로 이동 (예: /home/ubuntu/neptunebot)
+#!/bin/bash
+
+# 1. nvm 또는 Node.js 환경 변수 로드
+# nvm을 사용하는 경우 아래 경로를 자신의 환경에 맞게 추가하세요.
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# 2. 봇이 위치한 디렉토리로 이동
 # 자신의 환경에 맞게 경로를 수정하세요.
 APP_DIR="/home/ubuntu/neptunebot"
-
 cd "$APP_DIR" || exit
 
-# 프로세스가 실행 중인지 확인 ("node src/index.ts" 프로세스 감지)
+# 3. 프로세스가 실행 중인지 확인 ("node src/index.ts" 프로세스 감지)
 if ! pgrep -f "node src/index.ts" > /dev/null; then
     echo "[$(date)] Bot is dead. Restarting..." >> bot_monitor.log
     
     # 로그를 남기며 백그라운드 실행
-    # (주의: npm run start 명령은 내부적으로 node src/index.ts를 실행합니다)
     nohup npm run start > bot_output.log 2>&1 &
 fi
 ```

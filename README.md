@@ -117,35 +117,22 @@ npm run start
 ### Crontab으로 자동 실행 및 유지 (Auto-restart)
 서버가 재부팅되거나 봇이 예기치 않게 종료되었을 때, 자동으로 봇을 다시 실행하기 위해 `crontab`과 쉘 스크립트를 사용합니다.
 
-#### 1. 실행 스크립트 작성 (`neptunebot.sh`)
-프로젝트 루트 디렉토리에 `neptunebot.sh` 파일을 생성합니다.
+#### 1. 실행 스크립트 확인 (`neptunebot.sh`)
+프로젝트에 포함된 `neptunebot.sh`를 사용합니다. Bash와 `pgrep`, `pkill`이 필요합니다.
 
-```bash
-#!/bin/bash
+스크립트는 자신의 위치를 기준으로 프로젝트 디렉토리를 찾고, `node`에 `src/index.ts`의 절대 경로를 전달하여 실행합니다. 같은 사용자로 실행된 프로세스 중 이 명령 전체가 일치하는 봇만 확인하므로, 다른 프로젝트의 `node src/index.ts`를 봇으로 오인하지 않습니다. 경로에 공백이나 정규식 특수문자가 있어도 문자 그대로 비교합니다.
 
-# 1. nvm 또는 Node.js 환경 변수 로드
-# nvm을 사용하는 경우 아래 경로를 자신의 환경에 맞게 추가하세요.
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+`bot_output.log`에는 표준 출력과 오류를 이어 쓰므로 재시작 전 로그가 유지됩니다. 실행 시각은 `bot_monitor.log`에 기록됩니다. 로그 파일은 프로젝트 디렉토리에 생성됩니다.
 
-# 2. 봇이 위치한 디렉토리로 이동
-# 자신의 환경에 맞게 경로를 수정하세요.
-APP_DIR="/home/ubuntu/neptunebot"
-cd "$APP_DIR" || exit
+`nvm`이 설치되어 있으면 `$NVM_DIR/nvm.sh`(기본값: `$HOME/.nvm/nvm.sh`)를 로드하고, 그 외에는 `PATH`의 Node.js를 사용합니다. crontab에서도 Node.js 24 이상을 찾을 수 있도록 환경을 설정하세요.
 
-# 3. 프로세스가 실행 중인지 확인 ("node src/index.ts" 프로세스 감지)
-if ! pgrep -f "node src/index.ts" > /dev/null; then
-    echo "[$(date)] Bot is dead. Restarting..." >> bot_monitor.log
-    
-    # 로그를 남기며 백그라운드 실행
-    nohup npm run start > bot_output.log 2>&1 &
-fi
-```
+`npm run start`로 실행 중인 봇은 해당 터미널에서 `Ctrl+C`로 종료한 뒤 이 스크립트로 전환하세요. 상대 경로로 직접 실행한 봇은 스크립트의 감지·종료 대상에 포함되지 않습니다.
 
 #### 2. 실행 권한 부여
 스크립트 파일에 실행 권한을 부여합니다.
 ```bash
 chmod +x neptunebot.sh
+./neptunebot.sh
 ```
 
 #### 3. Crontab 등록
@@ -161,8 +148,10 @@ crontab -e
 
 ```cron
 # 1분마다 봇 상태 체크 및 재시작
-* * * * * /home/ubuntu/neptunebot/neptunebot.sh
+* * * * * /opt/neptunebot/neptunebot.sh
 ```
+
+`/opt/neptunebot`은 예시이며 실제 프로젝트 경로로 바꾸세요. 실행 권한을 부여한 뒤 스크립트가 있는 디렉토리에서 `pwd`로 경로를 확인할 수 있습니다.
 
 저장하고 나옵니다.
 - `nano` 에디터인 경우: `Ctrl+O` -> `Enter` -> `Ctrl+X`
@@ -187,13 +176,15 @@ cat bot_monitor.log
     ```bash
     crontab -e
     # 해당 라인 앞에 #을 붙여 주석 처리 후 저장
-    # * * * * * /home/ubuntu/neptunebot/neptunebot.sh
+    # * * * * * /opt/neptunebot/neptunebot.sh
     ```
 
 2.  **프로세스 종료**:
     ```bash
-    pkill -f "node src/index.ts"
+    ./neptunebot.sh stop
     ```
+
+    스크립트로 실행한 이 프로젝트의 봇에만 `SIGTERM`을 보냅니다. 봇은 음성 연결과 Discord 클라이언트를 정리한 뒤 종료합니다.
 
 ## 🎵 사용 방법 (Usage)
 
